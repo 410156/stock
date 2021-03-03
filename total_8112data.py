@@ -6,6 +6,10 @@ from datetime import datetime
 import sys
 import pickle
 from pandas import Series
+######
+
+
+
 
 path_kd = '/home/qqqqqq/stock/include_KDdata/'
 _file_kd = os.listdir(path_kd)
