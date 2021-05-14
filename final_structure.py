@@ -1,3 +1,6 @@
+#!usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import pandas as pd
 import json
@@ -6,17 +9,18 @@ import sys
 import pickle
 import re
 import requests
-from bs4 import BeautifulSoup as bs
 import sys
 import time
 from random import randint
+from bs4 import BeautifulSoup as bs
 from datetime import datetime
 from pandas import Series
 from talib import abstract
-                
+
+
 def merge_data(data_kd, chart):
 
-    ''' input chart : 
+    ''' input chart :
 
                 1091231 1081231
     cash-value     aa       cc
@@ -25,7 +29,7 @@ def merge_data(data_kd, chart):
 
         input data_kd :
                 K D High Low
-    2014-01-01  a b  c    d  
+    2014-01-01  a b  c    d
     2014-01-02  e f  g    g
 
         output :
@@ -33,20 +37,7 @@ def merge_data(data_kd, chart):
     2014-01-01  a b  c    d      aa      cc
     2014-01-02  e f  g    g      bb     dd
      '''
-    '''
-    chart.index = chart.index+'-value'
-    chart_rate = pd.DataFrame()
-    for column in chart.columns:
-        if column[-1] == '1':
-            chart = chart.rename(columns={column:column[0:-2]})
-        if column[-1] =='2':
-            chart_rate[column[0:-2]] = chart[column]
-            chart = chart.drop(columns = column)
-    chart_rate.index = [i[0:-6]+'-rate' for i in chart_rate.index]
-    chart = chart.append(chart_rate)
-    chart.columns = [datetime.strptime(str(int(chart.columns[i][0:3])+1911)+'-'+chart.columns[i][4:6]+'-'+chart.columns[i][7:9],"%Y-%m-%d") for i in range(len(chart.columns))]
-    '''
-    for date in data_kd['Date'][:3]: # for each trading date
+    for date in data_kd['Date']: # for each trading date
         # sequentially search for the corresponding report date
         for i in range(1, len(chart.columns)): # for each report date
             if chart.columns[i-1]<date and date<=chart.columns[i]:
@@ -57,18 +48,23 @@ def merge_data(data_kd, chart):
     data_kd = data_kd.set_index('Date')
     chart = chart.T
     total_data = pd.concat([chart, data_kd], axis=1)
+
     return total_data
 
 
+
+
+#! z -> change
+
 def load_data(path, stock_codes):
 
-    _file = sorted(os.listdir(path))
+    files = sorted(os.listdir(path))
 
     total_data = {}
     for z in _file:
         with open(path+z, 'rb') as f:
             data = json.load(f)
-            print(z)           
+            print(z)
             print(data['2414'])
             for stock in stock_codes:
                 if stock not in total_data.keys():
@@ -112,6 +108,7 @@ class Add_chart:
         res = requests.post(url, data = stock_dic, headers=headers)
         soup = bs(res.text,'lxml')
         return soup
+
     def financial_crawler(self,url,stock_code_list):
         #stock_code_list = ['8112']
         print(stock_code_list)
@@ -140,13 +137,13 @@ class Add_chart:
                     df = df.iloc[0:-1,0:3]#只存第一個日期的資料
                     if intial == 1:
                         total_df = df
-                    else:  
+                    else:
                         total_df=pd.merge(total_df,df)
-                    intial = 0        
+                    intial = 0
                     time.sleep(randint(2, 6))
                     print(season)
 
-            total_df = total_df.set_index('欄位名稱')   
+            total_df = total_df.set_index('欄位名稱')
             total_df.index = total_df.index+'-value'
             chart_rate = pd.DataFrame()
             for column in total_df.columns:
@@ -158,7 +155,7 @@ class Add_chart:
             chart_rate.index = [i[0:-6]+'-rate' for i in chart_rate.index]
             total_df = total_df.append(chart_rate)
             total_df.columns = [datetime.strptime(str(int(total_df.columns[i][0:3])+1911)+'-'+total_df.columns[i][4:6]+'-'+total_df.columns[i][7:9],"%Y-%m-%d") for i in range(len(total_df.columns))]
-            return total_df 
+            return total_df
 
 
 
@@ -195,17 +192,17 @@ class Generate_index:
         for i in range(1,len(target['y_updown'])):
             if target['y_updown'][i]>0:
                 target['y_point'][i] = 1
-            
+
             elif target['y_updown'][i]<0:
                 target['y_point'][i] = -1
-        
+
             else:#if target['y_updown'][i]==0:
                 target['y_point'][i] = 0
-        
+
         #    else:
         #        target['y_point'][i] = np.NaN
-        
         return target
+
     def ma(self,target):
         target['5MA']=target['close'].rolling(5).mean()
         target['20MA']=target['close'].rolling(20).mean()
@@ -216,16 +213,18 @@ class Generate_index:
             if target['5MA'][i-1]<target['20MA'][i-1] and target['5MA'][i]>target['20MA'][i] and target['20MA'][i]!=np.NaN:
                 target['5MA over 20MA'][i] = 1
             else:
-                target['5MA over 20MA'][i] = 0   
+                target['5MA over 20MA'][i] = 0
         target['20MA over 5MA'] = 0
         for i in range(1,len(target['20MA'])):
             if target['5MA'][i-1]>target['20MA'][i-1] and target['5MA'][i]<target['20MA'][i] and target['20MA'][i]!=np.NaN:
                 target['20MA over 5MA'][i] = 1
             else:
-                target['20MA over 5MA'][i] = 0   
- 
+                target['20MA over 5MA'][i] = 0
+
        #target['20MA over 5MA']=[1 if ttarget['5MA'][i-1]>target['20MA'][i-1] and target['5MA'][i]<target['20MA'][i] and target['20MA']!=np.NaN else 0 for i in range(1,len(target['20MA']))]
         return target
+
+
     def generate(self,data,key):
         #data[key] = self.kd(data[key])
         #data[key] = self.ema(data[key])
@@ -233,11 +232,13 @@ class Generate_index:
         data[key] = self.y(data[key])
         data[key] = self.ma(data[key])
         return data[key]
+
+
 if '__main__' == __name__:
-    
+
     stock_codes = pickle.load(open('./stock_number/ep.pkl','rb'))[17:-1]
     print(len(stock_codes))
-    
+
     #stock_codes=[]
     #for i in new:
     #    stock_codes.append(str(i))
