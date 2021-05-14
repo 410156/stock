@@ -18,6 +18,11 @@ from pandas import Series
 from talib import abstract
 
 
+
+# data_kd -> stock_indices
+# chart -> ?
+
+
 def merge_data(data_kd, chart):
 
     ''' input chart :
