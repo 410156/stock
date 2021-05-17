@@ -1,29 +1,35 @@
-import numpy as np
-import pandas as pd
+#!usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+
+from bs4 import BeautifulSoup as bs
+from datetime import datetime
 import json
+import numpy as np
 import os
-import sys
+import pandas as pd
+from pandas import Series
 import pickle
+from random import randint
 import re
 import requests
-from bs4 import BeautifulSoup as bs
 import sys
-import time
-from random import randint
-from datetime import datetime
-from pandas import Series
+import statistics as st
+from scipy import stats 
 from talib import abstract
-                
-def merge_data(data_kd, chart):
+import time
 
-    ''' input chart : 
+               
+def merge_data(technical, fincial_report):
+    '''
+    input fincial_report : 
 
                 1091231 1081231
     cash-value     aa       cc
     cash-rate      bb       dd
 
 
-        input data_kd :
+        input technical :
                 K D High Low
     2014-01-01  a b  c    d  
     2014-01-02  e f  g    g
@@ -32,51 +38,38 @@ def merge_data(data_kd, chart):
                 K D High Low cash-value cash-rate
     2014-01-01  a b  c    d      aa      cc
     2014-01-02  e f  g    g      bb     dd
-     '''
-    '''
-    chart.index = chart.index+'-value'
-    chart_rate = pd.DataFrame()
-    for column in chart.columns:
-        if column[-1] == '1':
-            chart = chart.rename(columns={column:column[0:-2]})
-        if column[-1] =='2':
-            chart_rate[column[0:-2]] = chart[column]
-            chart = chart.drop(columns = column)
-    chart_rate.index = [i[0:-6]+'-rate' for i in chart_rate.index]
-    chart = chart.append(chart_rate)
-    chart.columns = [datetime.strptime(str(int(chart.columns[i][0:3])+1911)+'-'+chart.columns[i][4:6]+'-'+chart.columns[i][7:9],"%Y-%m-%d") for i in range(len(chart.columns))]
-    '''
-    for date in data_kd['Date'][:3]: # for each trading date
+    ''' 
+    for date in technical['Date']: # for each trading date
+        print(date)
         # sequentially search for the corresponding report date
-        for i in range(1, len(chart.columns)): # for each report date
-            if chart.columns[i-1]<date and date<=chart.columns[i]:
-                chart[date] = chart[chart.columns[i-1]]
-                break#防止i跑到後面後會跑到else,找到後就跳出
+        for i in range(1, len(fincial_report.columns)): # for each report date
+            if fincial_report.columns[i-1]<date and date<=fincial_report.columns[i]:
+                fincial_report[date] = fincial_report[fincial_report.columns[i-1]]
+                break #avoid overwritting
             else:
-                chart[date] = ''*len(chart.index)#沒有在區間內設空值
-    data_kd = data_kd.set_index('Date')
-    chart = chart.T
-    total_data = pd.concat([chart, data_kd], axis=1)
-    return total_data
+                fincial_report[date] = ''*len(fincial_report.index)
+    technical = technical.set_index('Date')
+    fincial_report = fincial_report.T
+    merge = pd.concat([fincial_report, technical], axis=1)
+    return merge
 
 
 def load_data(path, stock_codes):
-
-    _file = sorted(os.listdir(path))
-
+    files = sorted(os.listdir(path))
     total_data = {}
-    for z in _file:
-        with open(path+z, 'rb') as f:
+    for _file in files:
+        with open(path+_file, 'rb') as f:
             data = json.load(f)
-            print(z)           
-            print(data['2414'])
             for stock in stock_codes:
                 if stock not in total_data.keys():
                     total_data[stock] = []
                 if stock not in data.keys():
-                    total_data[stock].append([datetime.strptime(z.strip('.json'), '%Y-%m-%d'), stock, np.nan, np.nan, np.nan, np.nan])
+                    total_data[stock].append([datetime.strptime(_file.strip('.json'), '%Y-%m-%d'), stock, np.nan, np.nan, np.nan, np.nan])
                 else:
-                    total_data[stock].append([datetime.strptime(z.strip('.json'), '%Y-%m-%d'), stock, float(data[stock]['open']), float(data[stock]['high']), float(data[stock]['low']), float(data[stock]['close'])])
+                    try :
+                        total_data[stock].append([datetime.strptime(_file.strip('.json'), '%Y-%m-%d'), stock, float(data[stock]['open']), float(data[stock]['high']), float(data[stock]['low']), float(data[stock]['close'])])
+                    except:
+                        total_data[stock].append([datetime.strptime(_file.strip('.json'), '%Y-%m-%d'), stock, np.nan, np.nan, np.nan, np.nan])
     for code in total_data.keys():
         total_data[code] = np.array(total_data[code])
 
@@ -113,7 +106,6 @@ class Add_chart:
         soup = bs(res.text,'lxml')
         return soup
     def financial_crawler(self,url,stock_code_list):
-        #stock_code_list = ['8112']
         print(stock_code_list)
         total_df=pd.DataFrame()
         for code in stock_code_list:
@@ -135,7 +127,8 @@ class Add_chart:
 
                     content = np.array(content).reshape(-1, col_num)#把data reshape為日期為columns 資料名稱為index的形狀
                     content = content[content[:, 1]!='']
-
+                    print(content.shape)
+                    exit()
                     df = pd.DataFrame(content, columns=new_dates)
                     df = df.iloc[0:-1,0:3]#只存第一個日期的資料
                     if intial == 1:
@@ -188,94 +181,115 @@ class Generate_index:
         return target
 
     def y(self,target):
-        target['y_updown']=target['close']-target['close'].shift(periods=1)
-        target['y_percent'] = (target['close']-target['close'].shift(periods=1))/target['close']
-        #target['y_point'] = [1 if target['y_updown'][i]>0  else -1 if target['y_updown'][i]<0  else 0 for i in range(1,len(target['y_updown']))]
-        target['y_point'] = 0
-        for i in range(1,len(target['y_updown'])):
-            if target['y_updown'][i]>0:
-                target['y_point'][i] = 1
-            
-            elif target['y_updown'][i]<0:
-                target['y_point'][i] = -1
-        
-            else:#if target['y_updown'][i]==0:
-                target['y_point'][i] = 0
-        
-        #    else:
-        #        target['y_point'][i] = np.NaN
+        target['y_point']=target['close'].shift(periods=-1)-target['close']
+        target['y_point'][pd.isnull(target['y_point'])] = 0
+
+        target['y_percent'] = target['y_point']/target['close']
+        target['y_percent'][pd.isnull(target['y_percent'])] = 0
+
+        target['y_updown'] = 0
+        for i in range(1,len(target['y_point'])):
+            if target['y_point'][i]>0:
+                target['y_updown'][i] = 1
+            elif target['y_point'][i]<0:
+                target['y_updown'][i] = 0
+            else:  
+                target['y_updown'][i] = 0
         
         return target
+
     def ma(self,target):
-        target['5MA']=target['close'].rolling(5).mean()
-        target['20MA']=target['close'].rolling(20).mean()
-        target['60MA']=target['close'].rolling(60).mean()
-        target['5MA over 20MA'] = 0
-        #target['5MA over 20MA']=[1 if target['5MA'][i-1]<target['20MA'][i-1] and target['5MA'][i]>target['20MA'][i] and target['20MA']!=np.NaN else 0 for i in range(1,len(target['20MA']))]
+        target['5MA']=(target['close']+target['close'].shift(periods=1)+target['close'].shift(periods=2)+target['close'].shift(periods=3)+target['close'].shift(periods=4))/5
+        target['20MA'] = target['close']
+        for i in range(1,20):
+            target['20MA'] = target['20MA'] + target['close'].shift(periods=i)
+        target['20MA'] = target['20MA']/20
+
+        target['60MA'] = target['close']
+        for i in range(1,60):
+            target['60MA'] = target['60MA'] + target['close'].shift(periods=i)
+        target['60MA'] = target['60MA']/60
+
+        target['5MA over 20MA'] = False
         for i in range(1,len(target['20MA'])):
             if target['5MA'][i-1]<target['20MA'][i-1] and target['5MA'][i]>target['20MA'][i] and target['20MA'][i]!=np.NaN:
-                target['5MA over 20MA'][i] = 1
+                target['5MA over 20MA'][i] = True
             else:
-                target['5MA over 20MA'][i] = 0   
-        target['20MA over 5MA'] = 0
+                target['5MA over 20MA'][i] = False   
+        target['20MA over 5MA'] = False
         for i in range(1,len(target['20MA'])):
             if target['5MA'][i-1]>target['20MA'][i-1] and target['5MA'][i]<target['20MA'][i] and target['20MA'][i]!=np.NaN:
-                target['20MA over 5MA'][i] = 1
+                target['20MA over 5MA'][i] = True
             else:
-                target['20MA over 5MA'][i] = 0   
- 
-       #target['20MA over 5MA']=[1 if ttarget['5MA'][i-1]>target['20MA'][i-1] and target['5MA'][i]<target['20MA'][i] and target['20MA']!=np.NaN else 0 for i in range(1,len(target['20MA']))]
+                target['20MA over 5MA'][i] = False   
         return target
+
+
     def generate(self,data,key):
-        #data[key] = self.kd(data[key])
-        #data[key] = self.ema(data[key])
-        #data[key] = self.macd(data[key])
+        data[key] = self.kd(data[key])
+        data[key] = self.ema(data[key])
+        data[key] = self.macd(data[key])
         data[key] = self.y(data[key])
         data[key] = self.ma(data[key])
         return data[key]
-if '__main__' == __name__:
-    
-    stock_codes = pickle.load(open('./stock_number/ep.pkl','rb'))[17:-1]
-    print(len(stock_codes))
-    
-    #stock_codes=[]
-    #for i in new:
-    #    stock_codes.append(str(i))
-    #print(stock_codes)
-    path = '/home/db/stock_resource_center/resource/twse/json/'
-    #stock_codes = ['2414']
-    #print(stock_codes)
-    #selected_stock = load_data(path, stock_codes)
-    #exit()
-    #add_index = Generate_index()
-    #for code in stock_codes:
-        #print(code)
-        #df = add_index.generate(selected_stock, code) #-> ./data/8112.pkl 有kd
-        #df = pickle.dump(df,open(f'./kd_data/{code}_technical.pkl','wb'))
-    #exit()
-    
-    df = pickle.load(open('./kd_data/2347_technical.pkl','rb'))
-    
-    print(df)#.iloc[-200:-180,:])
-    
-    exit()
-       
-    #a = pickle.load(open('./final_chart/2414_chart.pkl','rb'))
-    #print(a)
-    #exit()
-    #url = "https://mops.twse.com.tw/mops/web/t164sb03"
-    #get_chart = Add_chart()
-    #for i in stock_codes:
-    #    chart = get_chart.financial_crawler(url,[i]) # chart/8112.pkl
-    #    pickle.dump(chart,open(f'./final_chart/{i}_chart.pkl','wb'))
-    
-    chart = pickle.load(open('./final_chart/chart.pkl','rb'))   
-    #exit()
-    final_data = merge_data(df, chart)
 
-# pickle.dump(final_data, open(f'./final_data/{code}.pkl', 'wb'))
-    pickle.dump(final_data,open('./total_data/8112.pkl','wb'))
-    final_data = pickle.load(open('./total_data/8112.pkl','rb'))
-    print(len(final_data.index))
-    print(final_data.iloc[-1000:-1,0:6])
+
+
+if '__main__' == __name__:
+
+    
+    # generate pretict_revise.py's input
+    stock_codes = pickle.load(open('./stock_number/ep.pkl','rb'))[7:-1]
+    #all_col = pickle.load(open('selected_cols_for_total_data.pkl', 'rb'))
+
+    for i in stock_codes:
+        print(i)
+        if(i!='3055' and i!='6281' and i!='6776' and i!='2414'):
+            df = pickle.load(open(f'./kd_data/{i}_technical.pkl','rb'))
+            print(df)
+            chart = pickle.load(open(f'./final_chart/{i}_chart.pkl','rb'))   
+            chart = chart.T 
+            all_col = chart.columns
+            for s in all_col:
+                for j in range(len(chart[s])):       
+                    if type(chart[s][j])==str:
+                        if ',' in chart[s][j]:
+                            chart[s][j] = float(chart[s][j].replace(',', ''))
+            chart = chart.T
+            print(chart)
+            final_data = merge_data(df, chart)
+            for x in range(len(final_data['y_point'])):
+              if np.isnan(final_data['y_point'][x]):
+                  final_data['y_point'][x] = 0
+            for x in range(len(final_data['y_percent'])):
+               if np.isnan(final_data['y_percent'][x]):
+                   final_data['y_percent'][x] = 0
+            for x in range(len(final_data['y_updown'])):
+                if np.isnan(final_data['y_updown'][x]):
+                    final_data['y_updown'][x] = 0
+            pickle.dump(final_data,open(f'./predict_input/{i}_merge.pkl','wb'))
+            print(final_data)
+    exit()
+
+
+    # generate technical data
+    tmp = ['']
+    stock_codes = pickle.load(open('./stock_number/ep.pkl','rb'))[1:-1]
+    for i in stock_codes:
+        print(i)
+        if(i!='3055' and i!='6281' and i!='6776'):
+            path = '/home/db/stock_resource_center/resource/twse/json/'
+            tmp[0] = i
+            selected_stock = load_data(path, tmp)
+            add_index = Generate_index()
+            df = add_index.generate(selected_stock, tmp[0])
+            print(df)
+            exit()
+            #pickle.dump(df,open(f'./kd_data/{code}_technical.pkl','wb'))
+    exit()
+
+    # generate fincial report  data
+    url = "https://mops.twse.com.tw/mops/web/t164sb03"
+    get_chart = Add_chart()
+        
 
