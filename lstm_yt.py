@@ -46,12 +46,16 @@ if '__main__' == __name__:
 
             for year in range(2004, 2021):
                 for month in range(1, 13):
+
+                    # 找到那個月份的index有哪些後拿出來
                     if month != 12:
                         count = dates.loc[(dates>=datetime(year, month, 1)) & (dates<datetime(year, month+1, 1))].index
                     else:
                         count = dates.loc[(dates>=datetime(year, 12, 1)) & (dates<datetime(year+1, 1, 1))].index
                     wanted = predict_content.iloc[count]
 
+
+                    # 如果不足24天, 補最後一天的資料補足24天, 順便存y
                     if wanted.shape[0] != 0 and wanted.shape[0] != 24:
                         y = wanted['y_point'].values[-1] - wanted['y_point'].values[0]
                         wanted = wanted[cols].values
@@ -60,7 +64,8 @@ if '__main__' == __name__:
 
                         all_x = np.concatenate((all_x, wanted), axis=0)
                         all_y.append(y)
+
+    # 共有606筆資料, 每筆x的維度是24*48
     all_x = all_x.reshape(-1, 24, 48)
     print(all_x.shape)
     print(len(all_y))
-
