@@ -25,20 +25,26 @@ def combine_files(files,all_col,full_x_array,full_y_array):
             pre_day = 0#記錄前一個迴圈日期的日
             max_month_day = 24#一個月最多24個開盤日
 
+            count = 0
             for date in stock_data['Date']:
+                count += 1
                 #若上一個回圈的日比這個回圈的日大代表已經到下一個月了,且date為新月份第一個日期
                 if date.day<pre_day:
+                    print('-')
                     #把上一個月份的日期區間資料append到full_x_array
                     full_x_array = np.append(full_x_array,stock_data[stock_data['Date']<date][stock_data['Date']>=start_date][all_col].values)
                     #用這個月最後一開盤日數據補足剩餘不滿24天的數據
                     for null_date in range(max_month_day-one_month_day):
+
+                                                   #! full_x_array 是array,   後面這邊是dataframe, 這樣np.append沒問題嗎(?)
+                        print(full_x_array.shape) #! 這個full_x_array的維度只有一維? 為什麼不是48個col所以有48維?
                         full_x_array = np.append(full_x_array,stock_data[stock_data['Date'] == full_x_array[-1]][all_col])
+                        print(full_x_array.shape)
                     #start_date目前是上一個月的第一個開盤日
-                    y_date = start_date
+                    y_date = start_date    #! y_date = start_date = date ? 那為什麼要分成這麼多變數, 不延用date一個變數就好?
                     start_date = date
                     #新月份第一個開盤日的收盤價
                     new_point = stock_data[stock_data['Date'] == date]['close'].values
-                   
                     if new_point-pre_point>0:
                         full_y_array = np.append(full_y_array,1)
                     elif new_point-pre_point==0:
@@ -53,6 +59,11 @@ def combine_files(files,all_col,full_x_array,full_y_array):
                 else:
                     one_month_day = one_month_day + 1
                 pre_day = date.day
+                if count == 20:
+                    exit()
+
+                print(pre_day)
+                print('-'*30)
 
     print(full_x_array.shape)
     print(full_y_array.shape)
