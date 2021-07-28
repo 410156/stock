@@ -18,7 +18,7 @@ def combine_files(files,all_col,full_x_array,full_y_array):
             stock_data = pickle.load(f)
             stock_data = stock_data.reset_index().rename(columns={'index': 'Date'})
 
-            start_date = datetime(year=2004,month=2,day=11)#記錄每個月的第一個開盤日
+            start_date = datetime(year=2004,month=2,day=11)#記錄上個月的第一個開盤日
             one_month_day = 0#用來記算每個月的天數
             new_point = 0#記錄新月分第一個開盤日的收盤價
             pre_point = 0#記錄上一個月第一個開盤日的收盤價
@@ -37,13 +37,11 @@ def combine_files(files,all_col,full_x_array,full_y_array):
                     for null_date in range(max_month_day-one_month_day):
 
                                                    #! full_x_array 是array,   後面這邊是dataframe, 這樣np.append沒問題嗎(?)
+                                                   #把1個row ,48個col的dataframe append到array後使full_x_array增加48個一維資料 
                         print(full_x_array.shape) #! 這個full_x_array的維度只有一維? 為什麼不是48個col所以有48維?
                         full_x_array = np.append(full_x_array,stock_data[stock_data['Date'] == full_x_array[-1]][all_col])
                         print(full_x_array.shape)
-                    #start_date目前是上一個月的第一個開盤日
-                    y_date = start_date    #! y_date = start_date = date ? 那為什麼要分成這麼多變數, 不延用date一個變數就好?
-                    start_date = date
-                    #新月份第一個開盤日的收盤價
+                                       #新月份第一個開盤日的收盤價
                     new_point = stock_data[stock_data['Date'] == date]['close'].values
                     if new_point-pre_point>0:
                         full_y_array = np.append(full_y_array,1)
@@ -52,15 +50,20 @@ def combine_files(files,all_col,full_x_array,full_y_array):
                     else:
                         full_y_array = np.append(full_y_array,-1)
                     #把新月份減舊月份收盤價放到舊月份第一個開盤日
-                    full_y_array = np.append(full_y_array,y_date)
+                    full_y_array = np.append(full_y_array,start_date)
+
+                    #y_date = start_date    #! y_date = start_date = date ? 那為什麼要分成這麼多變數, 不延用date一個變數就好?                    
+                    #更新start_date
+                    start_date = date
+
                     pre_point = new_point
                     one_month_day = 1
                     pre_day = date.day
                 else:
                     one_month_day = one_month_day + 1
                 pre_day = date.day
-                if count == 20:
-                    exit()
+                #if count == 20:
+                #    exit()
 
                 print(pre_day)
                 print('-'*30)
