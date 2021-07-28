@@ -24,6 +24,7 @@ def combine_files(files,all_col,full_x_array,full_y_array):
             pre_point = 0#記錄上一個月第一個開盤日的收盤價
             pre_day = 0#記錄前一個迴圈日期的日
             max_month_day = 24#一個月最多24個開盤日
+
             for date in stock_data['Date']:
                 #若上一個回圈的日比這個回圈的日大代表已經到下一個月了,且date為新月份第一個日期
                 if date.day<pre_day:
