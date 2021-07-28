@@ -30,14 +30,18 @@ def combine_files(files,all_col,full_x_array,full_y_array):
                 count += 1
                 #若上一個回圈的日比這個回圈的日大代表已經到下一個月了,且date為新月份第一個日期
                 if date.day<pre_day:
-                    print('-')
                     #把上一個月份的日期區間資料append到full_x_array
                     full_x_array = np.append(full_x_array,stock_data[stock_data['Date']<date][stock_data['Date']>=start_date][all_col].values)
                     #用這個月最後一開盤日數據補足剩餘不滿24天的數據
                     for null_date in range(max_month_day-one_month_day):
 
                                                    #! full_x_array 是array,   後面這邊是dataframe, 這樣np.append沒問題嗎(?)
-                                                   #把1個row ,48個col的dataframe append到array後使full_x_array增加48個一維資料 
+                                                   #把1個row ,48個col的dataframe append到array後使full_x_array增加48個一維資料
+
+                                                   #! 一個array無限往右延長這件事情不合理, 請讓同一個col在同一個vector上
+                                                   # 增加方法不應該是 [ ... ] -> [... ...], 要 [...] -> [...]
+                                                   #                                                    [...]
+
                         print(full_x_array.shape) #! 這個full_x_array的維度只有一維? 為什麼不是48個col所以有48維?
                         full_x_array = np.append(full_x_array,stock_data[stock_data['Date'] == full_x_array[-1]][all_col])
                         print(full_x_array.shape)
@@ -52,8 +56,6 @@ def combine_files(files,all_col,full_x_array,full_y_array):
                     #把新月份減舊月份收盤價放到舊月份第一個開盤日
                     full_y_array = np.append(full_y_array,start_date)
 
-                    #y_date = start_date    #! y_date = start_date = date ? 那為什麼要分成這麼多變數, 不延用date一個變數就好?                    
-                    #更新start_date
                     start_date = date
 
                     pre_point = new_point
@@ -62,11 +64,7 @@ def combine_files(files,all_col,full_x_array,full_y_array):
                 else:
                     one_month_day = one_month_day + 1
                 pre_day = date.day
-                #if count == 20:
-                #    exit()
 
-                print(pre_day)
-                print('-'*30)
 
     print(full_x_array.shape)
     print(full_y_array.shape)
