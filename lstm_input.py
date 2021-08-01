@@ -30,7 +30,7 @@ def combine_files(files,all_col,full_x,full_y):
                 count += 1
                 #若上一個回圈的日比這個回圈的日大代表已經到下一個月了,且date為新月份第一個日期
                 if date.day<pre_day:
-                    print('-')
+                    #print('-')
                     #把上一個月份的日期區間資料append到full_x
                     full_x = np.concatenate((full_x,stock_data[stock_data['Date']<date][stock_data['Date']>=start_date][all_col].values),axis=0)
                     #用這個月最後一開盤日數據補足剩餘不滿24天的數據
@@ -43,13 +43,16 @@ def combine_files(files,all_col,full_x,full_y):
 
                     #新月份第一個開盤日的收盤價
                     new_point = stock_data[stock_data['Date'] == date]['close'].values
-                    #把新月份減舊月份收盤價放到舊月份第一個開盤日
                     if new_point-pre_point>0:
                         full_y = full_y.append({'y':1,'Date':start_date},ignore_index=True)
                     elif new_point-pre_point==0:
                         full_y = full_y.append({'y':0,'Date':start_date},ignore_index=True)
                     else:
                         full_y = full_y.append({'y':-1,'Date':start_date},ignore_index=True)
+                    #把新月份減舊月份收盤價放到舊月份第一個開盤日
+                    #full_y = np.append(full_y,start_date)
+                    print(full_y)
+                    #y_date = start_date    #! y_date = start_date = date ? 那為什麼要分成這麼多變數, 不延用date一個變數就好?                    
                     #更新start_date
                     start_date = date
 
@@ -59,11 +62,11 @@ def combine_files(files,all_col,full_x,full_y):
                 else:
                     one_month_day = one_month_day + 1
                 pre_day = date.day
-                if count == 20:
-                    exit()
+                #if count == 20:
+                #    exit()
 
-                print(pre_day)
-                print('-'*30)
+                #print(pre_day)
+                #print('-'*30)
 
     print(full_x.shape)
     print(full_y.shape)
