@@ -30,7 +30,6 @@ def combine_files(files,all_col,full_x,full_y):
             for date in stock_data['Date']:
                 #若上一個回圈的日比這個回圈的日大代表已經到下一個月了,且date為新月份第一個日期
                 if date.day<pre_day:
-                    #print('-')
                     #把上一個月份的日期區間資料append到full_x
                     full_x = np.concatenate((full_x,stock_data[stock_data['Date']<date][stock_data['Date']>=start_date][all_col].values),axis=0)
                     #用這個月最後一開盤日數據補足剩餘不滿24天的數據
@@ -76,7 +75,6 @@ if '__main__' == __name__:
     all_col = [s for s in all_col if s != 'y_updown' and s != 'y_percent' and s != 'y_point']
 
     full_x = np.empty((0,len(all_col)))
-    #full_y = np.empty((0,1))
     full_y = pd.DataFrame(columns = ['y','Date'])
 
     full_x,full_y = combine_files(files,all_col,full_x,full_y)

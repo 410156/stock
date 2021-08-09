@@ -23,8 +23,11 @@ import tensorflow as tf
 
 def sharpe_ratio(test_x,predict_result):
 
+    #每個月第一天股價
     month_first_price = [test_x['close'].values[i] for i in range(0,len(test_x['close']),24)]
+    #所有股票代號
     stock_code = [test_x['stock_num'].values[i] for i in range(0,len(test_x['stock_num']),24)]
+    #每個月低一個開盤日
     time = [pd.to_datetime(str(test_x['Date'].values[i])) for i in range(0,len(test_x['Date']),24)]
     
     profit = {}
@@ -34,9 +37,11 @@ def sharpe_ratio(test_x,predict_result):
     for predict in range(len(predict_result)-1):
 
         time_period = time[predict].strftime("%Y/%m/%d") + '-' + time[predict+1].strftime("%Y/%m/%d")
+        #預測為1進行買入因此下一個月收盤價減這個月收盤價
         if predict_result[predict] == 1:
             profit[stock_code[predict]][time_period] = (month_first_price[predict+1]-month_first_price[predict])/month_first_price[predict]              
 
+        #預測為-1進行賣出因此這個月收盤價減下個月收盤價
         elif predict_result[predict] == -1:
             profit[stock_code[predict]][time_period] = (month_first_price[predict]-month_first_price[predict+1])/month_first_price[predict]              
 
