@@ -105,7 +105,7 @@ if '__main__' == __name__:
     test_x = np.reshape(testing_x_set_scaled, ((int)(testing_x_set_scaled.shape[0]/24), 24, testing_x_set_scaled.shape[1]))
 
     model = Sequential()
-    #callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+    callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=100)
 
     model.add(LSTM(128, activation='relu',return_sequences = True, input_shape=(train_x.shape[1], train_x.shape[2])))
     model.add(Dropout(0.2))
@@ -120,11 +120,10 @@ if '__main__' == __name__:
     model.summary()
 
     model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy',f1_m,precision_m, recall_m])
-    model.fit(train_x, tf.keras.utils.to_categorical(train_y,  num_classes=3), epochs=100, batch_size=10)#,callbacks=[callback])
+    model.fit(train_x, tf.keras.utils.to_categorical(train_y,  num_classes=3), epochs=100, batch_size=10,callbacks=[callback])
     loss, accuracy, f1_score, precision, recall = model.evaluate(test_x, tf.keras.utils.to_categorical(test_y, num_classes=3), verbose=1)
 
     testPredict = model.predict(test_x, verbose=1)
-    #pickle.dump(testPredict,open('./lstm_testPredict.pkl','wb'))
     y_result = np.argmax(testPredict,axis=1)
     test_y = test_y[:,0]
 
